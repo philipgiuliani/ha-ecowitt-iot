@@ -87,32 +87,35 @@ class EcowittDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.iot_run_duration: dict[int, int] = {}
 
     async def async_quick_run(
-        self, iot_id: int, iot_model: int, *, on_time: int = 0
+        self, iot_id: int, iot_model: int, *, duration: int = 0
     ) -> None:
-        """Start a watering run on an IoT water timer.
+        """Start a watering run on a WFC01 water timer.
 
-        When ``on_time`` > 0 the gateway/device stops watering by itself after
-        that duration, independent of Home Assistant or internet connectivity.
-        ``on_time`` == 0 falls back to the integration's original behaviour
-        (``always_on``), i.e. run until ``async_quick_stop`` is called.
+        When ``duration`` > 0 the device waters for that many seconds and then
+        stops by itself, independent of Home Assistant or internet
+        connectivity. This is expressed via ``val_type``/``val``, not
+        ``on_time`` (the gateway ignores ``on_time`` for quick_run):
+          - val_type 0 = duration in seconds, val = seconds
+          - val_type 1 = duration in minutes (unused here)
+        ``duration`` == 0 falls back to ``always_on`` (run until quick_stop).
+        Verified on WFC01 firmware 114: val_type 0 / val N auto-stops after N s.
         """
-        if on_time > 0:
-            # Mirror the gateway's known-good quick_run payload and only flip the
-            # two fields that matter: always_on -> 0 and on_time -> duration.
-            # The device then stops by itself after on_time.
+        if duration > 0:
             cmd = {
                 "on_type": 0,
                 "off_type": 0,
                 "always_on": 0,
-                "on_time": int(on_time),
+                "on_time": 0,
                 "off_time": 0,
-                "val_type": 1,
-                "val": 0,
+                "val_type": 0,
+                "val": int(duration),
                 "cmd": "quick_run",
                 "id": iot_id,
                 "model": iot_model,
             }
         else:
+            # No duration: run until explicitly stopped (gateway's run-forever
+            # quick_run payload).
             cmd = {
                 "on_type": 0,
                 "off_type": 0,

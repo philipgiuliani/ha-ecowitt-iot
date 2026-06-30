@@ -111,15 +111,17 @@ automation:
           duration: 30
 ```
 
-### :warning: Verify the duration unit on your hardware
+### How the timed run is sent
 
-The gateway payload field is `on_time`; this fork assumes **seconds**. The unit
-could not be confirmed from the API alone. Before relying on it, test once:
-set the duration to `60`, press Quick run, and time how long the valve runs.
+The quick run is sent to `parse_quick_cmd_iot` as `always_on:0` with a
+`val_type`/`val` pair (the gateway ignores the `on_time` field for `quick_run`):
 
-- Stops after ~60 seconds -> unit is seconds (as assumed). Done.
-- Stops after ~60 minutes -> unit is minutes; set durations accordingly (use
-  small numbers).
+- `val_type:0`, `val:N` -> water for **N seconds**, then auto-stop
+- `val_type:1`, `val:N` -> water for **N minutes**, then auto-stop
+
+This integration uses **seconds** (`val_type:0`). Verified on a WFC01 running
+firmware 114: `val_type:0, val:20` waters for ~20 s and the device stops itself.
+The "Run duration" number is therefore in seconds.
 
 ## Compatibility Instructions for all ecowitt network consoles
 ![Compatibility Instructions for all ecowitt network consoles](https://oss.ecowitt.net/uploads/20260224/7d20e0c51af395cc66af81f2fa458115.png)

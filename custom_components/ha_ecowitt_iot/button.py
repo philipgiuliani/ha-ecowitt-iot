@@ -130,14 +130,14 @@ class EcowittQuickRunButton(CoordinatorEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Run for the duration configured on the sibling number entity."""
         await self.coordinator.async_quick_run(
-            self._iot_id, self._iot_model, on_time=self._configured_duration()
+            self._iot_id, self._iot_model, duration=self._configured_duration()
         )
 
     async def async_quick_run_service(self, duration: int | None = None) -> None:
         """Service handler: run for an explicit duration or the configured one."""
-        on_time = int(duration) if duration is not None else self._configured_duration()
+        seconds = int(duration) if duration is not None else self._configured_duration()
         await self.coordinator.async_quick_run(
-            self._iot_id, self._iot_model, on_time=on_time
+            self._iot_id, self._iot_model, duration=seconds
         )
 
     async def async_quick_stop_service(self) -> None:

@@ -14,10 +14,9 @@ IOT_CMD_ENDPOINT = "parse_quick_cmd_iot"
 # IoT sub-device model ids (as reported in the iot device list).
 WFC01_MODEL = 1  # water timer; the only model this timed-run feature targets
 
-# Run duration (sent as `on_time`). When > 0 the device/gateway stops watering
-# by itself after this many units, independent of Home Assistant.
-# NOTE: the unit (seconds vs minutes) is assumed to be SECONDS based on the
-# gateway payload; verify on real hardware with a small value (see README).
+# Run duration in seconds (sent as val_type:0 / val:<seconds>). When > 0 the
+# device waters for this many seconds and then stops by itself, independent of
+# Home Assistant. Verified on WFC01 firmware 114.
 DEFAULT_RUN_SECONDS = 300
 MIN_RUN_SECONDS = 1
 MAX_RUN_SECONDS = 86340  # 23h59m, generous upper bound for the service call
