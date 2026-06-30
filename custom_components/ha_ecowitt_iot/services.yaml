@@ -1,0 +1,32 @@
+quick_run:
+  name: Quick run (timed)
+  description: >-
+    Start a watering run on a WFC01. The device stops itself when the duration
+    elapses, independent of Home Assistant or internet connectivity.
+  target:
+    entity:
+      integration: ha_ecowitt_iot
+      domain: button
+  fields:
+    duration:
+      name: Duration
+      description: >-
+        Run time (sent as on_time). If omitted, the value of the device's
+        "Run duration" number entity is used.
+      required: false
+      example: 300
+      selector:
+        number:
+          min: 1
+          max: 86340
+          step: 1
+          unit_of_measurement: s
+          mode: box
+
+quick_stop:
+  name: Quick stop
+  description: Stop a running WFC01 watering run immediately.
+  target:
+    entity:
+      integration: ha_ecowitt_iot
+      domain: button

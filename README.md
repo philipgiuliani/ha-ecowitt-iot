@@ -60,6 +60,67 @@ To set up Ecowitt Official Integration, follow these steps:
 ![Step 3](./img/TF3-3.jpg)
 ![Step 4](./img/TF4.jpg)
 
+## :potted_plant: WFC01 timed "Quick Run" (fork addition)
+
+> This section documents a feature added in this fork. It is **not** part of the
+> upstream Ecowitt integration.
+
+The upstream integration exposes the WFC01 water timer only as a plain on/off
+switch that sends `always_on`, i.e. the valve runs until Home Assistant sends a
+stop. If HA or the network fails mid-run, the water keeps flowing.
+
+This fork adds a **device-side timer**: the run duration is sent to the gateway,
+and the WFC01 stops by itself when the time is up, independent of HA and the
+internet.
+
+For each online WFC01 you now get:
+
+- **Number "Run duration"** (`number.<device>_run_duration`) - the watering
+  duration in seconds, persisted across restarts (default 300).
+- **Button "Quick run"** (`button.<device>_quick_run`) - starts a run for the
+  configured duration; the device auto-stops.
+
+And two services (target a Quick run button entity):
+
+- `ha_ecowitt_iot.quick_run` - start a run; optional `duration` field overrides
+  the number entity for that call.
+- `ha_ecowitt_iot.quick_stop` - stop immediately.
+
+Example: water every 5 minutes only while the soil is dry, and lock out for 12h
+once it gets wet (each run auto-stops via the device, so HA is never the only
+thing that can stop the water):
+
+```yaml
+automation:
+  - alias: "Aquaponik Puls alle 5 min"
+    trigger:
+      - platform: time_pattern
+        minutes: "/5"
+    condition:
+      - condition: state
+        entity_id: timer.bewaesserung_pause
+        state: "idle"
+      - condition: numeric_state
+        entity_id: sensor.Soilmoisture_ch1
+        below: 40
+    action:
+      - service: ha_ecowitt_iot.quick_run
+        target:
+          entity_id: button.wfc01_quick_run
+        data:
+          duration: 30
+```
+
+### :warning: Verify the duration unit on your hardware
+
+The gateway payload field is `on_time`; this fork assumes **seconds**. The unit
+could not be confirmed from the API alone. Before relying on it, test once:
+set the duration to `60`, press Quick run, and time how long the valve runs.
+
+- Stops after ~60 seconds -> unit is seconds (as assumed). Done.
+- Stops after ~60 minutes -> unit is minutes; set durations accordingly (use
+  small numbers).
+
 ## Compatibility Instructions for all ecowitt network consoles
 ![Compatibility Instructions for all ecowitt network consoles](https://oss.ecowitt.net/uploads/20260224/7d20e0c51af395cc66af81f2fa458115.png)
 

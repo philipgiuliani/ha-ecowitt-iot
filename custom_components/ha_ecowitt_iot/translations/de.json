@@ -327,6 +327,32 @@
             "iot_running": {
                 "name": "Running"
             }
+        },
+        "number": {
+            "run_duration": {
+                "name": "Laufzeit"
+            }
+        },
+        "button": {
+            "quick_run": {
+                "name": "Sofort-Bewaesserung"
+            }
+        }
+    },
+    "services": {
+        "quick_run": {
+            "name": "Sofort-Bewaesserung (mit Laufzeit)",
+            "description": "Startet eine Bewaesserung am WFC01. Das Geraet stoppt nach Ablauf der Laufzeit von selbst, unabhaengig von Home Assistant.",
+            "fields": {
+                "duration": {
+                    "name": "Laufzeit",
+                    "description": "Laufzeit. Ohne Angabe wird der Wert der Number-Entity 'Laufzeit' des Geraets verwendet."
+                }
+            }
+        },
+        "quick_stop": {
+            "name": "Sofort-Stopp",
+            "description": "Stoppt eine laufende WFC01-Bewaesserung sofort."
         }
     }
 }

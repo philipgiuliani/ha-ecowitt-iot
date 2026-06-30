@@ -14,11 +14,18 @@ from wittiot.errors import WittiotError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.translation import async_get_translations
 
-from .const import CONF_MAC, DOMAIN, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+from .const import (
+    CONF_MAC,
+    DOMAIN,
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_UPDATE_INTERVAL,
+    IOT_CMD_ENDPOINT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,6 +82,80 @@ class EcowittDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._upgrade_bound = False
         self._last_seen_value: float = 0.0
         self._last_seen_ts: float = 0.0
+        # Per-IoT-device run duration (seconds), set by the number entity and
+        # read by the Quick Run button. Keyed by IoT device id.
+        self.iot_run_duration: dict[int, int] = {}
+
+    async def async_quick_run(
+        self, iot_id: int, iot_model: int, *, on_time: int = 0
+    ) -> None:
+        """Start a watering run on an IoT water timer.
+
+        When ``on_time`` > 0 the gateway/device stops watering by itself after
+        that duration, independent of Home Assistant or internet connectivity.
+        ``on_time`` == 0 falls back to the integration's original behaviour
+        (``always_on``), i.e. run until ``async_quick_stop`` is called.
+        """
+        if on_time > 0:
+            # Mirror the gateway's known-good quick_run payload and only flip the
+            # two fields that matter: always_on -> 0 and on_time -> duration.
+            # The device then stops by itself after on_time.
+            cmd = {
+                "on_type": 0,
+                "off_type": 0,
+                "always_on": 0,
+                "on_time": int(on_time),
+                "off_time": 0,
+                "val_type": 1,
+                "val": 0,
+                "cmd": "quick_run",
+                "id": iot_id,
+                "model": iot_model,
+            }
+        else:
+            cmd = {
+                "on_type": 0,
+                "off_type": 0,
+                "always_on": 1,
+                "on_time": 0,
+                "off_time": 0,
+                "val_type": 1,
+                "val": 0,
+                "cmd": "quick_run",
+                "id": iot_id,
+                "model": iot_model,
+            }
+        await self._async_send_iot_command(cmd)
+        await self.async_request_refresh()
+
+    async def async_quick_stop(self, iot_id: int, iot_model: int) -> None:
+        """Stop a running IoT water timer immediately."""
+        await self._async_send_iot_command(
+            {"cmd": "quick_stop", "id": iot_id, "model": iot_model}
+        )
+        await self.async_request_refresh()
+
+    async def _async_send_iot_command(self, cmd: dict[str, Any]) -> Any:
+        """POST a single IoT command to the gateway and return the response."""
+        host = self.config_entry.data[CONF_HOST]
+        url = f"http://{host}/{IOT_CMD_ENDPOINT}"
+        session = async_get_clientsession(self.hass)
+        payload = {"command": [cmd]}
+        try:
+            async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
+                async with session.post(url, json=payload) as resp:
+                    resp.raise_for_status()
+                    return await resp.json(content_type=None)
+        except _TRANSIENT_ERRORS as err:
+            _LOGGER.warning(
+                "Ecowitt IoT command %s for device %s failed: %s",
+                cmd.get("cmd"),
+                cmd.get("id"),
+                err,
+            )
+            raise HomeAssistantError(
+                f"Ecowitt IoT command '{cmd.get('cmd')}' failed: {err}"
+            ) from err
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:
