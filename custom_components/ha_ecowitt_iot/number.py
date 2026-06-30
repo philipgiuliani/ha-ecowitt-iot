@@ -10,7 +10,7 @@ from homeassistant.components.number import (
     NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, EntityCategory, UnitOfTime
+from homeassistant.const import CONF_HOST, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -80,7 +80,6 @@ class EcowittRunDurationNumber(CoordinatorEntity, RestoreEntity, NumberEntity):
 
     _attr_has_entity_name = True
     _attr_translation_key = "run_duration"
-    _attr_entity_category = EntityCategory.CONFIG
     _attr_device_class = NumberDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_native_min_value = MIN_RUN_SECONDS
