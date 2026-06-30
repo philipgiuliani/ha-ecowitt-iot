@@ -135,8 +135,14 @@ class EcowittDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         await self.async_request_refresh()
 
-    async def _async_send_iot_command(self, cmd: dict[str, Any]) -> Any:
-        """POST a single IoT command to the gateway and return the response."""
+    async def _async_send_iot_command(self, cmd: dict[str, Any]) -> None:
+        """POST a single IoT command to the gateway.
+
+        The gateway's reply to a command is not reliably valid JSON, and we do
+        not use it: the resulting state is read back by the next coordinator
+        refresh. So we only check the HTTP status and drain the body without
+        parsing it (parsing raised orjson 'unexpected content after document').
+        """
         host = self.config_entry.data[CONF_HOST]
         url = f"http://{host}/{IOT_CMD_ENDPOINT}"
         session = async_get_clientsession(self.hass)
@@ -145,7 +151,13 @@ class EcowittDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
                 async with session.post(url, json=payload) as resp:
                     resp.raise_for_status()
-                    return await resp.json(content_type=None)
+                    body = await resp.text()
+            _LOGGER.debug(
+                "Ecowitt IoT command %s for device %s sent; reply: %s",
+                cmd.get("cmd"),
+                cmd.get("id"),
+                body,
+            )
         except _TRANSIENT_ERRORS as err:
             _LOGGER.warning(
                 "Ecowitt IoT command %s for device %s failed: %s",
