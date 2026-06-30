@@ -85,7 +85,10 @@ class EcowittRunDurationNumber(CoordinatorEntity, RestoreEntity, NumberEntity):
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_native_min_value = MIN_RUN_SECONDS
     _attr_native_max_value = 7200
-    _attr_native_step = 5
+    # Step of 1s: any whole-second value is valid. A larger step would make
+    # HA reject values where (value - min) is not a multiple of the step
+    # (e.g. step 5 + min 1 rejects 30, 60, 300).
+    _attr_native_step = 1
     _attr_mode = NumberMode.BOX
     _attr_icon = "mdi:timer-cog-outline"
 
